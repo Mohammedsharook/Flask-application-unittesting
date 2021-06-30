@@ -1,17 +1,9 @@
-from flask import Flask, jsonify, request
 from app import *
 from email_validator import validate_email, EmailNotValidError
-import json
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:9944394985@localhost/new'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
 
 
-@app.before_first_request
 @app.route("/")
 def create_table():
-    db.create_all()
     return "<h1>Home Page</h1>"
 
 
@@ -27,16 +19,19 @@ def details(user_id):
 @app.route('/login', methods=['POST'])     # create
 def login():
     income_data = request.get_json()
-    name = income_data['name']
-    email = income_data['email']
-    if name is None or len(name) < 1:
-        return jsonify("Name field is required, Not be empty", {"name": "your_name"})
     try:
-        if validate_email(email):
-            user = EmployeeModel(name=name, email=email)
-            db.session.add(user)
-            db.session.commit()
-            return jsonify("Name and Email added successfully")
+        if 'name' and 'email' in income_data:
+            name = income_data['name']
+            email = income_data['email']
+            if not name.strip():
+                return jsonify({"Error": {"name": "name field is Not be empty"}})
+            if validate_email(email):
+                user = EmployeeModel(name=name, email=email)
+                db.session.add(user)
+                db.session.commit()
+                return jsonify("Name and Email added successfully")
+        else:
+            return jsonify("Both 'name' and 'email' field is required")
 
     except EmailNotValidError:
         return jsonify("Enter valid email address like - {}".format('example@gmail.com'))
@@ -47,18 +42,24 @@ def update(id):
     employee = EmployeeModel.query.filter_by(id=id).first()
     if request.method == 'PUT':
         if employee:
-            db.session.delete(employee)
-            db.session.commit()
             income_data = request.get_json()
-            name = income_data['name']
-            email = income_data['email']
-            if email is not None and validate_email(email):
-                user = EmployeeModel(id=id, name=name,email=email)
-                db.session.add(user)
-                db.session.commit()
-                return jsonify("USer updated successfully")
+            if 'name' and 'email' in income_data:
+                name = income_data['name']
+                email = income_data['email']
+                try:
+                    if not name.strip():
+                        return jsonify({"Error": {"name": "name field is Not be empty"}})
+                    validate_email(email)
+                    employee.name = name
+                    employee.email = email
+                    db.session.commit()
+                    return jsonify("User updated successfully")
+                except EmailNotValidError:
+                    return jsonify("Enter valid email address like - {}".format('example@gmail.com'))
+
             else:
-                return jsonify("Enter valid email id or email is required")
+                return jsonify("Both 'name' and 'email' field is required to update the user.")
+
         return jsonify("User id not exists")
 
 
