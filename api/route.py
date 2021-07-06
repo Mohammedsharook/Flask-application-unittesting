@@ -1,12 +1,11 @@
-from app import app, User, JobRole, db
+from config.app import app, db
+from models.model import User, JobRole
 from flask import jsonify, request
 
 
-@app.before_first_request
 @app.route("/")
 def home():
-    db.create_all()
-    return "<h1>Home Page</h1>"
+    return "<h1>Welcome Home</h1>"
 
 
 @app.route("/detail/<int:user_id>")  # Read
@@ -14,7 +13,9 @@ def details(user_id):
     user = User.query.filter_by(id=user_id).first()
     job = JobRole.query.filter_by(user_id=user_id).first()
     if user:
-        return jsonify({"name": user.Name, "job_role": job.job}  )
+        return jsonify({"name": user.Name, "job_role": job.job})
+    else:
+        return jsonify("User Id not found")
 
 
 @app.route('/login', methods=['POST'])
@@ -44,7 +45,7 @@ def update(id):
             if 'name' and 'job_role' in income_data:
                 name = income_data['name']
                 job_role = income_data['job_role']
-                job = JobRole(job=job_role,user=user)
+                job = JobRole(job=job_role, user=user)
                 JobRole.job = job
                 user.Name = name
                 db.session.commit()
@@ -54,16 +55,15 @@ def update(id):
         return jsonify("User id not exists")
 
 
-@app.route('/delete/<int:id>', methods=['delete'])    # delete
+@app.route('/delete/<int:id>', methods=['delete'])  # delete
 def delete(id):
     if request.method == "DELETE":
         user = User.query.filter_by(id=id).first()
-        if request.method == "DELETE":
-            if user:
-                db.session.delete(user)
-                db.session.commit()
-                return jsonify("User deleted successfully")
-            return jsonify("User Id Not Exists")
+        if user:
+            db.session.delete(user)
+            db.session.commit()
+            return jsonify("User deleted successfully")
+        return jsonify("User Id Not Exists")
 
 
 if __name__ == '__main__':
